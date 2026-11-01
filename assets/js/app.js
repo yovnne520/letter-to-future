@@ -253,12 +253,87 @@ function fallbackResult() {
 function renderResult(data) {
   lastResult = data;
   $("#futureYear").textContent = FUTURE_YEAR;
-  $("#letterBox").textContent = data.letter;
+  renderLetter(isUnlocked());
   $("#tagBadge").textContent = data.tag || "未来的你";
   $("#tagline").textContent = data.tagline || "";
   const stars = $("#stars");
   stars.textContent = "★★★★★".slice(0, data.rating) + "☆☆☆☆☆".slice(0, 5 - data.rating);
+
+  // 付费墙：未解锁时展示预览 + 解锁面板
+  const panel = $("#unlockPanel");
+  if (isUnlocked()) {
+    panel.style.display = "none";
+  } else {
+    panel.style.display = "block";
+    $("#codeMsg").textContent = "";
+    $("#codeMsg").className = "code-msg";
+    $("#codeInput").value = "";
+  }
   showScreen("screen-result");
+}
+
+// 根据解锁状态渲染信件正文（未解锁只显示预览片段）
+function renderLetter(unlocked) {
+  if (!lastResult) return;
+  const full = lastResult.letter || "";
+  if (unlocked) {
+    $("#letterBox").textContent = full;
+    return;
+  }
+  const n = (getConfig().PREVIEW_CHARS) || 150;
+  const preview = full.length <= n + 40 ? full : (full.slice(0, n) + "……");
+  $("#letterBox").textContent = preview;
+}
+
+function isUnlocked() {
+  try { return localStorage.getItem("lft_unlocked") === "1"; } catch (e) { return false; }
+}
+function setUnlocked() {
+  try { localStorage.setItem("lft_unlocked", "1"); } catch (e) {}
+}
+function setCodeMsg(msg, ok) {
+  const el = $("#codeMsg");
+  el.textContent = msg;
+  el.className = "code-msg " + (ok ? "ok" : "err");
+}
+function doUnlock() {
+  const code = ($("#codeInput").value || "").trim();
+  if (!code) { setCodeMsg("请输入解锁码", false); return; }
+  if (checkCode(code)) {
+    setUnlocked();
+    renderLetter(true);
+    $("#unlockPanel").style.display = "none";
+    setCodeMsg("解锁成功，完整信件已为你展开 💌", true);
+  } else {
+    setCodeMsg("解锁码无效，请检查大小写或联系卖家", false);
+  }
+}
+
+// ---------- 兑换码（无状态校验：密钥 + 校验位，无需后端码池） ----------
+const CODE_CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford 32 字符集（去 I/L/O/U，正好 32 个）
+function hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+// 生成：FUT-XXXXXXXX-XX（前 8 位随机 + 后 2 位校验）
+function makeCode(secret) {
+  let body = "";
+  for (let i = 0; i < 8; i++) body += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  const want = hashStr(body + secret) % 1024;
+  const chk = CODE_CHARS[Math.floor(want / 32)] + CODE_CHARS[want % 32];
+  return "FUT-" + body + "-" + chk;
+}
+// 校验：格式 + 校验位匹配
+function checkCode(code) {
+  code = String(code || "").trim().toUpperCase();
+  const m = /^FUT-([0-9A-HJKM-NP-TV-Z]{8})-([0-9A-HJKM-NP-TV-Z]{2})$/.exec(code);
+  if (!m) return false;
+  const body = m[1], chk = m[2];
+  const secret = (getConfig().UNLOCK_SECRET) || "";
+  const want = hashStr(body + secret) % 1024;
+  const exp = CODE_CHARS[Math.floor(want / 32)] + CODE_CHARS[want % 32];
+  return exp === chk;
 }
 
 // ---------- 分享卡（Canvas） ----------
@@ -505,15 +580,26 @@ function bind() {
   };
   $("#shareCardBtn").onclick = () => {
     if (!lastResult) return;
+    if (!isUnlocked()) { toast("解锁后可生成专属分享卡 💌"); return; }
     const url = buildShareCard(lastResult);
     $("#cardImg").src = url;
     $("#downloadCard").href = url;
     $("#cardModal").classList.add("open");
   };
+
+  // 付费墙：解锁交互（不依赖 cfg，可放此处）
+  $("#unlockBtn").onclick = doUnlock;
+  $("#codeInput").addEventListener("keydown", e => { if (e.key === "Enter") doUnlock(); });
   $("#closeCard").onclick = () => $("#cardModal").classList.remove("open");
 
   // 设置弹窗
   const cfg = getConfig();
+  // 价格与购买引导（读取配置）
+  const price = cfg.PAY_PRICE || "3.99";
+  $("#payPrice").textContent = "¥" + price;
+  $("#buyLink").textContent = "点此购买 ¥" + price;
+  if (cfg.PAY_URL) { $("#buyLink").href = cfg.PAY_URL; $("#buyLink").removeAttribute("target"); }
+  $("#payInfo").textContent = cfg.PAY_INFO || "";
   $("#cfgKey").value = (localStorage.getItem("app_cfg") ? JSON.parse(localStorage.getItem("app_cfg")).API_KEY : "") || "";
   $("#cfgBase").value = cfg.BASE_URL || "";
   $("#cfgModel").value = cfg.MODEL || "";
