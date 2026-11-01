@@ -7,7 +7,7 @@
 //  （也可用页面右上角 ⚙ 设置，Key 只存在你本机浏览器。）
 // ============================================================
 window.APP_CONFIG = {
-  API_KEY: "在此粘贴你的DeepSeek API Key",
+  API_KEY: "sk-31b7740ccd31433c9c455e0fd09c94c9",
   BASE_URL: "https://api.deepseek.com/v1",
   MODEL: "deepseek-chat",
   TEMPERATURE: 0.9
