@@ -29,6 +29,30 @@ const SHARE_URL = (location.protocol === "file:")
   ? "https://yovnne520.github.io/letter-to-future/"
   : (location.origin + location.pathname);
 
+// 分享卡 AI 氛围背景图（出图版）；图片未加载完成时回退到渐变
+const CARD_BG_PATHS = ["assets/img/bg-dawn.png", "assets/img/bg-star.png", "assets/img/bg-letter.png"];
+const cardBgImages = [];
+function preloadCardBgs() {
+  CARD_BG_PATHS.forEach(p => {
+    const img = new Image();
+    img.src = p;
+    cardBgImages.push(img);
+  });
+}
+function pickCardBg() {
+  const loaded = cardBgImages.filter(i => i.complete && i.naturalWidth > 0);
+  if (!loaded.length) return null;
+  return loaded[Math.floor(Math.random() * loaded.length)];
+}
+// 等比 cover 铺满画布（保持比例，居中裁剪，避免拉伸变形）
+function drawCover(ctx, img, W, H) {
+  const ir = img.width / img.height, cr = W / H;
+  let sw, sh, sx, sy;
+  if (ir > cr) { sh = img.height; sw = sh * cr; sx = (img.width - sw) / 2; sy = 0; }
+  else { sw = img.width; sh = sw / cr; sx = 0; sy = (img.height - sh) / 2; }
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+}
+
 // ---------- 状态 ----------
 const answers = {};
 let lastResult = null;
@@ -128,9 +152,7 @@ function validate() {
 // ---------- 调用大模型 ----------
 async function callLLM() {
   const cfg = getConfig();
-  if (!cfg.API_KEY || String(cfg.API_KEY).startsWith("在此")) {
-    throw new Error("请先在右上角 ⚙ 设置里填入 API Key");
-  }
+  const useWorker = !!(cfg.WORKER_URL && String(cfg.WORKER_URL).trim());
 
   const sys = `你是一个温柔、真诚、擅长共情的"未来信使"。根据一个人对当下生活的回答，以"五年后的Ta"的口吻，写一封给现在自己的信。
 要求：
@@ -154,12 +176,22 @@ async function callLLM() {
     temperature: cfg.TEMPERATURE != null ? cfg.TEMPERATURE : 0.9
   };
 
-  const res = await fetch(cfg.BASE_URL.replace(/\/$/, "") + "/chat/completions", {
+  let endpoint, headers;
+  if (useWorker) {
+    // 走 Cloudflare Worker 代理：Key 存在 Worker 端环境变量，前端不暴露
+    endpoint = String(cfg.WORKER_URL).trim();
+    headers = { "Content-Type": "application/json" };
+  } else {
+    if (!cfg.API_KEY || String(cfg.API_KEY).startsWith("在此")) {
+      throw new Error("请先在右上角 ⚙ 设置里填入 API Key，或配置 Worker 代理");
+    }
+    endpoint = cfg.BASE_URL.replace(/\/$/, "") + "/chat/completions";
+    headers = { "Content-Type": "application/json", "Authorization": "Bearer " + cfg.API_KEY };
+  }
+
+  const res = await fetch(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + cfg.API_KEY
-    },
+    headers: headers,
     body: JSON.stringify(body)
   });
 
@@ -236,18 +268,23 @@ function buildShareCard(data) {
   c.width = W; c.height = H;
   const ctx = c.getContext("2d");
 
-  // —— 背景：暖色柔光渐变 ——
-  const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "#fff3e6");
-  g.addColorStop(0.45, "#ffe6ef");
-  g.addColorStop(1, "#e7e0fb");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-
-  // 柔光晕
-  drawGlow(ctx, 210, 270, 340, "rgba(255,210,170,0.55)");
-  drawGlow(ctx, 890, 540, 360, "rgba(255,188,220,0.50)");
-  drawGlow(ctx, 540, 1720, 440, "rgba(186,176,255,0.50)");
+  // —— 背景：AI 生成氛围图铺底（出图版），未加载则回退渐变 ——
+  const bg = pickCardBg();
+  if (bg) {
+    drawCover(ctx, bg, W, H);
+    ctx.fillStyle = "rgba(255,255,255,0.38)";
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, "#fff3e6");
+    g.addColorStop(0.45, "#ffe6ef");
+    g.addColorStop(1, "#e7e0fb");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    drawGlow(ctx, 210, 270, 340, "rgba(255,210,170,0.55)");
+    drawGlow(ctx, 890, 540, 360, "rgba(255,188,220,0.50)");
+    drawGlow(ctx, 540, 1720, 440, "rgba(186,176,255,0.50)");
+  }
 
   // 外描边
   ctx.strokeStyle = "rgba(255,255,255,0.85)";
@@ -497,4 +534,5 @@ function bind() {
 // ---------- 初始化 ----------
 renderQuestions();
 bind();
+preloadCardBgs();
 $("#futureYear").textContent = FUTURE_YEAR;
