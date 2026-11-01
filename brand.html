@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>品牌定制测评 H5 · 可换皮演示</title>
+<style>
+  body { margin:0; font-family:-apple-system,'PingFang SC',sans-serif; background:#f6f3ef; color:#2c2622; }
+  .wrap { max-width:1000px; margin:0 auto; padding:28px 18px 60px; }
+  h1 { font-size:24px; margin:0; }
+  .sub { color:#8a7b72; margin:8px 0 24px; line-height:1.6; }
+  .layout { display:flex; gap:28px; flex-wrap:wrap; }
+  .panel { flex:1; min-width:300px; background:#fff; border-radius:16px; padding:22px; box-shadow:0 8px 30px rgba(0,0,0,.06); }
+  .panel h2 { font-size:16px; margin:0 0 6px; }
+  label { display:block; font-size:13px; color:#6b5f57; margin:16px 0 6px; }
+  input[type=text], textarea { width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #e3ddd5; border-radius:10px; font-size:14px; font-family:inherit; }
+  textarea { resize:vertical; min-height:60px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  input[type=color] { width:50px; height:38px; border:none; background:none; padding:0; cursor:pointer; }
+  button.gen { margin-top:20px; width:100%; padding:13px; border:none; border-radius:10px; background:#7a6cc4; color:#fff; font-size:15px; cursor:pointer; }
+  button.gen:hover { filter:brightness(1.05); }
+  .prev { flex:1; min-width:300px; display:flex; flex-direction:column; align-items:center; }
+  canvas { width:300px; height:auto; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.12); background:#fff; }
+  a.dl { margin-top:14px; padding:11px 18px; background:#2c2622; color:#fff; border-radius:10px; text-decoration:none; font-size:14px; }
+  .note { font-size:12px; color:#a99c92; margin-top:12px; line-height:1.7; }
+  .tag { display:inline-block; background:#efeaf7; color:#7a6cc4; font-size:12px; padding:3px 10px; border-radius:20px; margin-bottom:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>品牌定制测评 H5 · 可换皮演示</h1>
+  <p class="sub">改一下品牌名 / 主题色 / logo，右边的分享卡实时换皮。这是给品牌方看的"换皮能力"样板——<b>实际产品由 AI 按品牌语气生成结果</b>，这里用示例文案演示视觉。</p>
+  <div class="layout">
+    <div class="panel">
+      <span class="tag">DEMO · 不调用大模型</span>
+      <h2>品牌配置</h2>
+      <label>品牌名</label>
+      <input id="bName" type="text" value="星屿咖啡" />
+      <label>主题色</label>
+      <div class="row"><input id="bColor" type="color" value="#7a6cc4" /> <span id="bColorHex">#7a6cc4</span></div>
+      <label>Logo 文字 / Emoji</label>
+      <input id="bLogo" type="text" value="☕" />
+      <label>开场白（示例）</label>
+      <textarea id="bIntro">回答几个小问题，找到你的本命风味人格～</textarea>
+      <label>品牌域名 / 公众号</label>
+      <input id="bDomain" type="text" value="xingyu.coffee" />
+      <button class="gen" id="genBtn">生成品牌分享卡</button>
+      <p class="note">真实交付 = 12 题问卷 + AI 按品牌语气生成夸夸结果 + 一键分享卡（带品牌 logo 与二维码回链）+ 涨粉裂变。详细方案见 BRAND_PROPOSAL.md。</p>
+    </div>
+    <div class="prev">
+      <canvas id="card" width="1080" height="1920"></canvas>
+      <a class="dl" id="dl" download="品牌分享卡.png">保存图片</a>
+    </div>
+  </div>
+</div>
+<script>
+function $(id){ return document.getElementById(id); }
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function wrapText(ctx,text,x,y,maxW,lineH,maxLines){ const chars=String(text).split(""); let line="",lines=[]; for(const ch of chars){ if(ctx.measureText(line+ch).width>maxW&&line){ lines.push(line); line=ch; if(lines.length===maxLines-1) break; } else line+=ch; } if(line&&lines.length<maxLines) lines.push(line); let yy=y; for(const l of lines){ ctx.fillText(l,x,yy); yy+=lineH; } }
+function hexToRgb(h){ h=h.replace('#',''); return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)]; }
+function lighten(hex,amt){ const [r,g,b]=hexToRgb(hex); const f=v=>Math.min(255,Math.round(v+(255-v)*amt)); return "rgb("+f(r)+","+f(g)+","+f(b)+")"; }
+
+function drawCard(){
+  const name = $("bName").value || "品牌名";
+  const color = $("bColor").value || "#7a6cc4";
+  const logo = $("bLogo").value || "★";
+  const domain = $("bDomain").value || "";
+  const W=1080, H=1920;
+  const c=$("card"); const ctx=c.getContext("2d");
+
+  // 背景渐变（主题色）
+  const g=ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0, lighten(color,0.45));
+  g.addColorStop(0.5, lighten(color,0.74));
+  g.addColorStop(1, "#ffffff");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle="rgba(255,255,255,0.9)"; ctx.lineWidth=4; roundRect(ctx,44,44,W-88,H-88,44); ctx.stroke();
+  ctx.textAlign="center";
+
+  // logo + 品牌名
+  ctx.font="84px -apple-system,'PingFang SC',sans-serif"; ctx.fillStyle=color; ctx.fillText(logo, W/2, 185);
+  ctx.fillStyle="#3a2f2a"; ctx.font="700 58px -apple-system,'PingFang SC',sans-serif"; ctx.fillText(name, W/2, 305);
+  ctx.fillStyle="#9a7b6a"; ctx.font="400 28px -apple-system,'PingFang SC',sans-serif"; ctx.fillText("AI 人格测评 · 专属你的风味", W/2, 350);
+
+  // 信纸面板
+  const px=90, py=420, pw=W-180, ph=820;
+  ctx.save(); ctx.shadowColor="rgba(0,0,0,.12)"; ctx.shadowBlur=40; ctx.shadowOffsetY=18;
+  ctx.fillStyle="rgba(255,255,255,0.92)"; roundRect(ctx,px,py,pw,ph,40); ctx.fill(); ctx.restore();
+
+  // 金句（示例）
+  ctx.fillStyle="#3a2f2a"; ctx.font="700 60px 'Songti SC','STSong',serif";
+  wrapText(ctx, "你不是普通爱好者，你是把生活过成仪式感的风味诗人。", W/2, py+250, pw-150, 86, 5);
+  ctx.fillStyle=color; ctx.font="500 38px 'Songti SC',serif";
+  ctx.fillText("—— "+name+" 想对你说", W/2, py+650);
+
+  // 标签徽章
+  const tag="本命风味人格 · 醇厚探索者";
+  ctx.font="700 38px -apple-system,'PingFang SC',sans-serif";
+  const tw=ctx.measureText(tag).width+84; const ty=1330;
+  ctx.fillStyle=color; roundRect(ctx,(W-tw)/2,ty,tw,84,42); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.fillText(tag, W/2, ty+55);
+
+  // 星级
+  const starY=1500, starR=34, gap=88, total=5;
+  const sx=W/2-gap*(total-1)/2;
+  for(let i=0;i<total;i++){ const cx=sx+i*gap, cy=starY;
+    ctx.beginPath(); for(let k=0;k<5;k++){ const a=-Math.PI/2+k*2*Math.PI/5; const ox=cx+Math.cos(a)*starR, oy=cy+Math.sin(a)*starR; const a2=a+Math.PI/5; const ix=cx+Math.cos(a2)*starR*0.45, iy=cy+Math.sin(a2)*starR*0.45; if(k===0) ctx.moveTo(ox,oy); else ctx.lineTo(ox,oy); ctx.lineTo(ix,iy); } ctx.closePath(); ctx.fillStyle=color; ctx.fill(); }
+
+  // 二维码占位
+  const qrS=200, qx=W/2-qrS/2, qy=1600;
+  ctx.strokeStyle="rgba(58,47,42,0.25)"; ctx.lineWidth=2; roundRect(ctx,qx,qy,qrS,qrS,16); ctx.stroke();
+  ctx.fillStyle="rgba(58,47,42,0.4)"; ctx.font="400 24px -apple-system,sans-serif"; ctx.fillText("二维码", W/2, qy+qrS/2+8);
+  ctx.fillStyle="#8a7b72"; ctx.font="400 30px -apple-system,'PingFang SC',sans-serif";
+  ctx.fillText("长按识别 · 测出你的专属人格", W/2, qy+qrS+50);
+
+  // 域名
+  ctx.fillStyle="rgba(138,123,114,0.8)"; ctx.font="400 26px -apple-system,sans-serif";
+  ctx.fillText(domain, W/2, H-66);
+
+  $("dl").href = c.toDataURL("image/png");
+}
+$("genBtn").onclick = drawCard;
+$("bColor").oninput = function(){ $("bColorHex").textContent = this.value; };
+drawCard();
+</script>
+</body>
+</html>
