@@ -53,6 +53,23 @@
       <div class="result-card">
         <p class="result-eyebrow">来自 <span id="futureYear">2031</span> 年的一封信</p>
         <div id="letterBox" class="letter"></div>
+
+        <!-- 付费墙：未解锁时显示 -->
+        <div id="unlockPanel" class="unlock-panel">
+          <div class="unlock-fade"></div>
+          <div class="unlock-box">
+            <p class="unlock-title">🔒 这封信，还有更多温柔没读完</p>
+            <p class="unlock-sub">支付 <b id="payPrice">¥3.99</b> 解锁完整信件 + 专属分享卡</p>
+            <div class="unlock-input-row">
+              <input id="codeInput" type="text" placeholder="输入解锁码，如 FUT-AB12CD34-EF" autocomplete="off" />
+              <button id="unlockBtn" class="btn-primary">解锁</button>
+            </div>
+            <p id="codeMsg" class="code-msg"></p>
+            <p id="payInfo" class="pay-info"></p>
+            <p class="unlock-buy">还没有解锁码？<a id="buyLink" href="#" target="_blank" rel="noopener">点此购买 ¥3.99</a></p>
+          </div>
+        </div>
+
         <div class="result-meta">
           <span id="tagBadge" class="tag-badge"></span>
           <div id="stars" class="stars"></div>
