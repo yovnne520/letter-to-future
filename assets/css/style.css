@@ -218,6 +218,45 @@ body { min-height: 100vh; }
 }
 .result-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
+/* 付费墙 */
+.unlock-panel { margin-top: 4px; }
+.unlock-fade {
+  height: 46px;
+  margin: -28px 0 4px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), var(--card) 78%);
+  pointer-events: none;
+}
+.unlock-box {
+  border: 1.5px dashed var(--brand);
+  background: var(--brand-soft);
+  border-radius: 16px;
+  padding: 18px 16px 16px;
+  text-align: center;
+}
+.unlock-title { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 6px; }
+.unlock-sub { font-size: 13.5px; color: var(--muted); margin: 0 0 14px; }
+.unlock-sub b { color: var(--brand); font-size: 16px; }
+.unlock-input-row { display: flex; gap: 8px; max-width: 360px; margin: 0 auto; }
+.unlock-input-row input {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.unlock-input-row input:focus { outline: none; border-color: var(--brand); }
+.unlock-input-row .btn-primary { padding: 11px 22px; font-size: 15px; flex: 0 0 auto; }
+.code-msg { font-size: 13px; min-height: 18px; margin: 10px 0 0; }
+.code-msg.err { color: #d4564b; }
+.code-msg.ok { color: #3a9d6b; }
+.unlock-buy { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+.unlock-buy a { color: var(--brand); font-weight: 700; text-decoration: none; }
+.unlock-buy a:hover { text-decoration: underline; }
+.pay-info { font-size: 12.5px; color: var(--muted); margin: 4px 0 12px; line-height: 1.6; }
+
 /* 弹窗 */
 .modal {
   display: none;
