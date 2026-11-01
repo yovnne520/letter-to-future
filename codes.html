@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>解锁码生成器 · 写给未来你的一封信</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="screen active">
+      <div class="intro-card">
+        <p class="eyebrow">商家工具</p>
+        <h1 class="title">解锁码<span>生成器</span></h1>
+        <p class="subtitle">客户付款后，你用这个工具生成一批码发给ta。<br/>每个码可解锁一次完整信件 + 分享卡。</p>
+
+        <div class="q-block" style="text-align:left;margin-bottom:18px">
+          <label class="q-label">生成数量</label>
+          <input id="numInput" class="q-input" type="number" value="20" min="1" max="500" style="min-height:auto" />
+        </div>
+
+        <button id="genBtn" class="btn-primary">生成解锁码</button>
+
+        <div id="outWrap" class="q-block" style="margin-top:18px;display:none;text-align:left">
+          <label class="q-label">生成结果（每行一个，复制发给客户）</label>
+          <textarea id="out" class="q-input" readonly style="min-height:180px;font-family:monospace"></textarea>
+          <button id="copyBtn" class="btn-ghost" style="margin-top:10px">复制全部</button>
+        </div>
+
+        <p class="intro-foot" style="margin-top:22px;line-height:1.7">
+          密钥读取自 <code>config.js</code> 的 UNLOCK_SECRET，与线上站点一致。<br/>
+          若你修改过该密钥，请先刷新本页再生成，否则码在线上校验会失败。
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script>
+    // 与 app.js 完全一致的算法（独立副本，不依赖 DOM 逻辑）
+    const CODE_CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+    function hashStr(s) {
+      let h = 5381;
+      for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+      return h;
+    }
+    function makeCode(secret) {
+      let body = "";
+      for (let i = 0; i < 8; i++) body += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+      const want = hashStr(body + secret) % 1024;
+      const chk = CODE_CHARS[Math.floor(want / 32)] + CODE_CHARS[want % 32];
+      return "FUT-" + body + "-" + chk;
+    }
+
+    const secret = (window.APP_CONFIG && window.APP_CONFIG.UNLOCK_SECRET) || "";
+    document.getElementById("genBtn").onclick = () => {
+      const n = Math.max(1, Math.min(500, parseInt(document.getElementById("numInput").value, 10) || 1));
+      if (!secret) { alert("未读取到 UNLOCK_SECRET，请确认 config.js 已正确加载"); return; }
+      const codes = [];
+      for (let i = 0; i < n; i++) codes.push(makeCode(secret));
+      const out = document.getElementById("out");
+      out.value = codes.join("\n");
+      document.getElementById("outWrap").style.display = "block";
+    };
+    document.getElementById("copyBtn").onclick = () => {
+      const out = document.getElementById("out");
+      out.select();
+      try {
+        navigator.clipboard.writeText(out.value);
+        alert("已复制 " + out.value.split("\n").length + " 个码");
+      } catch (e) {
+        document.execCommand("copy");
+        alert("已复制");
+      }
+    };
+  </script>
+</body>
+</html>
