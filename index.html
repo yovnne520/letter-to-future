@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>写给未来你的一封信</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <!-- 设置按钮 -->
+  <button id="settingsBtn" class="gear" title="API 设置" aria-label="设置">⚙</button>
+
+  <main class="app">
+    <!-- 落地页 -->
+    <section id="screen-intro" class="screen active">
+      <div class="intro-card">
+        <p class="eyebrow">AI · 未来信使</p>
+        <h1 class="title">写给未来<span>你</span>的一封信</h1>
+        <p class="subtitle">回答 12 个小问题，让五年后的你，<br/>亲笔写一封信给此刻的自己。</p>
+        <ul class="intro-points">
+          <li>温柔、具体，不灌鸡汤</li>
+          <li>用你自己的故事写信</li>
+          <li>生成专属分享卡，发朋友圈</li>
+        </ul>
+        <button id="startBtn" class="btn-primary">开始写给未来的信</button>
+        <p class="intro-foot">约 3 分钟 · 无需注册</p>
+      </div>
+    </section>
+
+    <!-- 问卷页 -->
+    <section id="screen-quiz" class="screen">
+      <div class="quiz-head">
+        <span id="quizProgress" class="progress">12 题</span>
+        <h2>此刻的你，是什么样</h2>
+      </div>
+      <form id="quizForm" class="quiz-form"></form>
+      <div class="quiz-foot">
+        <button id="generateBtn" class="btn-primary">让未来的我写这封信 →</button>
+      </div>
+    </section>
+
+    <!-- 生成中 -->
+    <section id="screen-loading" class="screen">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <p class="loading-text">未来的你正在提笔……</p>
+        <p class="loading-sub" id="loadingSub">把你的故事，写成一封信</p>
+      </div>
+    </section>
+
+    <!-- 结果页 -->
+    <section id="screen-result" class="screen">
+      <div class="result-card">
+        <p class="result-eyebrow">来自 <span id="futureYear">2031</span> 年的一封信</p>
+        <div id="letterBox" class="letter"></div>
+        <div class="result-meta">
+          <span id="tagBadge" class="tag-badge"></span>
+          <div id="stars" class="stars"></div>
+        </div>
+        <p id="tagline" class="tagline"></p>
+        <div class="result-actions">
+          <button id="shareCardBtn" class="btn-primary">生成分享卡</button>
+          <button id="retryBtn" class="btn-ghost">再测一次</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 设置弹窗 -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-box">
+      <h3>API 设置</h3>
+      <p class="modal-tip">Key 保存在本机浏览器（localStorage），不会上传。留空则使用内置配置。</p>
+      <label>API Key<input id="cfgKey" type="text" placeholder="sk-..." /></label>
+      <label>接口地址<input id="cfgBase" type="text" placeholder="https://api.deepseek.com/v1" /></label>
+      <label>模型名<input id="cfgModel" type="text" placeholder="deepseek-chat" /></label>
+      <div class="modal-actions">
+        <button id="saveCfg" class="btn-primary">保存</button>
+        <button id="closeCfg" class="btn-ghost">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分享卡弹窗 -->
+  <div id="cardModal" class="modal">
+    <div class="modal-box wide">
+      <h3>你的专属分享卡</h3>
+      <div class="card-preview"><img id="cardImg" alt="分享卡" /></div>
+      <div class="modal-actions">
+        <a id="downloadCard" class="btn-primary" download="未来的一封信.png">保存图片</a>
+        <button id="closeCard" class="btn-ghost">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

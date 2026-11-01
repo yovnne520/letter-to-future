@@ -1,0 +1,8 @@
+# 依赖 / 系统
+node_modules/
+.DS_Store
+*.log
+
+# 说明：config.js 故意不忽略，部署时需要它（含 API Key 占位）。
+# 若你用 Cloudflare Worker 代理隐藏 Key，可把 config.js 改成只放占位、
+# 真实 Key 放 Worker，此时再把它加入 .gitignore。
