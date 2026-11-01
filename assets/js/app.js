@@ -24,6 +24,11 @@ const QUESTIONS = [
 
 const FUTURE_YEAR = new Date().getFullYear() + 5;
 
+// 分享卡二维码指向的站点地址（本地打开时回退到线上地址）
+const SHARE_URL = (location.protocol === "file:")
+  ? "https://yovnne520.github.io/letter-to-future/"
+  : (location.origin + location.pathname);
+
 // ---------- 状态 ----------
 const answers = {};
 let lastResult = null;
@@ -231,67 +236,105 @@ function buildShareCard(data) {
   c.width = W; c.height = H;
   const ctx = c.getContext("2d");
 
-  // 背景渐变
+  // —— 背景：暖色柔光渐变 ——
   const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "#fbe9d8");
-  g.addColorStop(0.5, "#f6e4ef");
-  g.addColorStop(1, "#e6e1f7");
+  g.addColorStop(0, "#fff3e6");
+  g.addColorStop(0.45, "#ffe6ef");
+  g.addColorStop(1, "#e7e0fb");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  // 内边框
-  ctx.strokeStyle = "rgba(255,255,255,0.7)";
-  ctx.lineWidth = 3;
-  roundRect(ctx, 50, 50, W - 100, H - 100, 36); ctx.stroke();
+  // 柔光晕
+  drawGlow(ctx, 210, 270, 340, "rgba(255,210,170,0.55)");
+  drawGlow(ctx, 890, 540, 360, "rgba(255,188,220,0.50)");
+  drawGlow(ctx, 540, 1720, 440, "rgba(186,176,255,0.50)");
+
+  // 外描边
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = 4;
+  roundRect(ctx, 44, 44, W - 88, H - 88, 44); ctx.stroke();
 
   ctx.textAlign = "center";
 
+  // —— 信封插画 ——
+  drawEnvelope(ctx, W / 2, 178, 150);
+
   // 标题
-  ctx.fillStyle = "#8a5a32";
-  ctx.font = "600 40px -apple-system, 'PingFang SC', sans-serif";
-  ctx.fillText("写给未来你的一封信", W / 2, 150);
+  ctx.fillStyle = "#8a4b2b";
+  ctx.font = "600 54px -apple-system, 'PingFang SC', sans-serif";
+  ctx.fillText("写给未来你的一封信", W / 2, 332);
+  ctx.fillStyle = "#bd8a6a";
+  ctx.font = "400 27px -apple-system, 'PingFang SC', sans-serif";
+  ctx.fillText("FROM YOUR FUTURE SELF · 一封迟到的温柔", W / 2, 372);
 
-  // 年份
-  ctx.fillStyle = "#c8743f";
-  ctx.font = "800 200px -apple-system, 'PingFang SC', sans-serif";
-  ctx.fillText(String(FUTURE_YEAR), W / 2, 360);
+  // —— 信纸面板 ——
+  const px = 90, py = 432, pw = W - 180, ph = 766;
+  ctx.save();
+  ctx.shadowColor = "rgba(120,90,60,0.18)";
+  ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  roundRect(ctx, px, py, pw, ph, 40); ctx.fill();
+  ctx.restore();
 
-  ctx.fillStyle = "#a98c6e";
-  ctx.font = "400 34px -apple-system, 'PingFang SC', sans-serif";
-  ctx.fillText("年后的你，想对现在的你说——", W / 2, 430);
+  // 引号装饰
+  ctx.fillStyle = "rgba(200,116,63,0.32)";
+  ctx.font = "700 130px Georgia, serif";
+  ctx.textAlign = "left";
+  ctx.fillText("“", px + 40, py + 140);
+  ctx.textAlign = "center";
 
-  // 金句
+  // 金句（大字诗意）
   ctx.fillStyle = "#3a2f2a";
-  ctx.font = "700 56px 'Songti SC', serif";
-  wrapText(ctx, data.tagline || "", W / 2, 560, W - 200, 76, 4);
+  ctx.font = "700 56px 'Songti SC', 'STSong', serif";
+  wrapText(ctx, data.tagline || "你值得被未来的自己温柔以待", W / 2, py + 230, pw - 150, 84, 5);
 
-  // 标签徽章
+  // 署名
+  ctx.fillStyle = "#a06a3c";
+  ctx.font = "500 34px 'Songti SC', serif";
+  ctx.fillText("—— 五年后的你", W / 2, py + 620);
+
+  // —— 标签徽章 ——
   const tag = data.tag || "未来的你";
-  ctx.font = "700 38px -apple-system, 'PingFang SC', sans-serif";
-  const tw = ctx.measureText(tag).width + 70;
-  const ty = 980;
+  ctx.font = "700 40px -apple-system, 'PingFang SC', sans-serif";
+  const tw = ctx.measureText(tag).width + 84;
+  const ty = 1250;
+  ctx.save();
+  ctx.shadowColor = "rgba(122,108,196,0.42)"; ctx.shadowBlur = 26;
   ctx.fillStyle = "#7a6cc4";
-  roundRect(ctx, (W - tw) / 2, ty, tw, 80, 40); ctx.fill();
+  roundRect(ctx, (W - tw) / 2, ty, tw, 84, 42); ctx.fill();
+  ctx.restore();
   ctx.fillStyle = "#fff";
-  ctx.fillText(tag, W / 2, ty + 54);
+  ctx.fillText(tag, W / 2, ty + 55);
 
-  // 星级
-  ctx.fillStyle = "#c8743f";
-  ctx.font = "60px sans-serif";
-  ctx.fillText("★★★★★".slice(0, data.rating) + "☆☆☆☆☆".slice(0, 5 - data.rating), W / 2, 1140);
+  // —— 星级（手绘五角星）——
+  const starY = 1420, starR = 32, gap = 84;
+  const total = 5, rating = data.rating || 5;
+  const startX = W / 2 - gap * (total - 1) / 2;
+  for (let i = 0; i < total; i++) {
+    drawStar(ctx, startX + i * gap, starY, starR, i < rating);
+  }
+  ctx.fillStyle = "#9a7b6a";
+  ctx.font = "400 28px -apple-system, 'PingFang SC', sans-serif";
+  ctx.fillText("治愈度 " + rating + ".0 / 5.0", W / 2, starY + 72);
 
-  // 底部引导
+  // —— 二维码 ——
+  const qrSize = 200, qrX = W / 2 - qrSize / 2, qrY = 1540;
+  const qrOK = drawQR(ctx, SHARE_URL, qrX, qrY, qrSize);
+  if (!qrOK) {
+    ctx.strokeStyle = "rgba(58,47,42,0.25)"; ctx.lineWidth = 2;
+    roundRect(ctx, qrX, qrY, qrSize, qrSize, 16); ctx.stroke();
+    ctx.fillStyle = "rgba(58,47,42,0.5)";
+    ctx.font = "400 26px -apple-system, sans-serif";
+    ctx.fillText("二维码", W / 2, qrY + qrSize / 2 + 10);
+  }
   ctx.fillStyle = "#8a7b72";
-  ctx.font = "400 34px -apple-system, 'PingFang SC', sans-serif";
-  ctx.fillText("扫码，让未来的自己写一封信给你", W / 2, 1700);
+  ctx.font = "400 28px -apple-system, 'PingFang SC', sans-serif";
+  ctx.fillText("长按识别 · 让未来的自己写封信给你", W / 2, qrY + qrSize + 44);
 
-  // 假二维码框
-  ctx.strokeStyle = "rgba(58,47,42,0.25)";
-  ctx.lineWidth = 2;
-  roundRect(ctx, W / 2 - 90, 1740, 180, 180, 16); ctx.stroke();
-  ctx.fillStyle = "rgba(58,47,42,0.5)";
-  ctx.font = "400 26px -apple-system, sans-serif";
-  ctx.fillText("二维码", W / 2, 1840);
+  // 域名水印
+  ctx.fillStyle = "rgba(138,123,114,0.75)";
+  ctx.font = "400 24px -apple-system, sans-serif";
+  ctx.fillText("yovnne520.github.io/letter-to-future", W / 2, 1840);
 
   return c.toDataURL("image/png");
 }
@@ -305,6 +348,91 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
 }
+
+function drawGlow(ctx, x, y, r, color) {
+  const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+  rg.addColorStop(0, color);
+  rg.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+
+function drawEnvelope(ctx, cx, cy, s) {
+  ctx.save();
+  const w = s, h = s * 0.66;
+  const x = cx - w / 2, y = cy - h / 2;
+  ctx.strokeStyle = "#c8743f";
+  ctx.lineWidth = 6;
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  roundRect(ctx, x, y, w, h, 14); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(cx, y + h * 0.55);
+  ctx.lineTo(x + w, y);
+  ctx.stroke();
+  drawHeart(ctx, cx, y + h * 0.30, 15);
+  ctx.restore();
+}
+
+function drawHeart(ctx, cx, cy, s) {
+  ctx.save();
+  ctx.fillStyle = "#e8607a";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + s * 0.3);
+  ctx.bezierCurveTo(cx + s, cy - s * 0.4, cx + s * 0.6, cy - s, cx, cy - s * 0.3);
+  ctx.bezierCurveTo(cx - s * 0.6, cy - s, cx - s, cy - s * 0.4, cx, cy + s * 0.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStar(ctx, cx, cy, r, filled) {
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + i * 2 * Math.PI / 5;
+    const ox = cx + Math.cos(a) * r, oy = cy + Math.sin(a) * r;
+    const a2 = a + Math.PI / 5;
+    const ix = cx + Math.cos(a2) * r * 0.45, iy = cy + Math.sin(a2) * r * 0.45;
+    if (i === 0) ctx.moveTo(ox, oy); else ctx.lineTo(ox, oy);
+    ctx.lineTo(ix, iy);
+  }
+  ctx.closePath();
+  if (filled) {
+    ctx.fillStyle = "#f0a23c";
+    ctx.fill();
+    ctx.strokeStyle = "#e08a2c"; ctx.lineWidth = 2; ctx.stroke();
+  } else {
+    ctx.strokeStyle = "rgba(240,162,60,0.45)"; ctx.lineWidth = 3; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// 在 canvas 上绘制真实可扫的二维码；失败返回 false（回退装饰框）
+function drawQR(ctx, text, x, y, size) {
+  try {
+    if (typeof qrcode !== "function") return false;
+    const qr = qrcode(0, "M");
+    qr.addData(text);
+    qr.make();
+    const count = qr.getModuleCount();
+    const cell = size / count;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = "#3a2f2a";
+    for (let r = 0; r < count; r++) {
+      for (let cc = 0; cc < count; cc++) {
+        if (qr.isDark(r, cc)) {
+          ctx.fillRect(x + cc * cell, y + r * cell, Math.ceil(cell), Math.ceil(cell));
+        }
+      }
+    }
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 12;
+    roundRect(ctx, x - 6, y - 6, size + 12, size + 12, 18); ctx.stroke();
+    return true;
+  } catch (e) { return false; }
+}
+
 function wrapText(ctx, text, x, y, maxW, lineH, maxLines) {
   const chars = String(text).split("");
   let line = "", lines = [];
